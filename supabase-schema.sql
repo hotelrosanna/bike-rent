@@ -11,7 +11,7 @@ create extension if not exists "pgcrypto";
 --   end_at valorizzato -> noleggio concluso (storico)
 create table if not exists public.rentals (
   id         uuid primary key default gen_random_uuid(),
-  bike       smallint    not null check (bike between 1 and 10),
+  bike       smallint    not null check (bike between 1 and 12),  -- 1..10 numerate, 11 = "Baby Kids", 12 = "Kids"
   room       text        not null,
   start_at   timestamptz not null default now(),
   end_at     timestamptz,

@@ -113,9 +113,13 @@ un'app.
 
 ## Personalizzazioni rapide
 
-- **Cambiare il numero di bici**: apri `src/App.jsx`, in alto cambia
-  `const TOTAL_BIKES = 10;`. Se vai oltre la 10, aggiorna anche il vincolo nel
-  database: nel file SQL la riga `check (bike between 1 and 10)`.
+- **Bici presenti**: 1–10 numerate + "Baby Kids" (id 11) e "Kids" (id 12). La
+  configurazione è in cima a `src/App.jsx` (`BIKE_NAMES` e `FLEET`). Per
+  aggiungerne altre, estendi quelle due righe e allarga il vincolo nel database
+  (vedi sotto).
+- **Se aggiungi/cambi bici nel database**: aggiorna il vincolo, es.
+  `check (bike between 1 and N)`. Lo script `migrazione-2-bici.sql` è un esempio
+  di come si fa.
 - **Dominio personalizzato** (es. `bici.tuohotel.it`): su Netlify → **Domain
   management**.
 

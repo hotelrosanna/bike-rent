@@ -2,7 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { Bike, Clock, History, Search, Download, TriangleAlert, Check, X, Plus, RotateCcw, Trash2, Pencil, WifiOff } from "lucide-react";
 import { supabase, isConfigured } from "./supabaseClient";
 
-const TOTAL_BIKES = 10;
+// Bici numerate 1..10 + due bici per bambini (id 11 e 12).
+const BIKE_NAMES = { 11: "Baby Kids", 12: "Kids" };
+const FLEET = [...Array.from({ length: 10 }, (_, i) => i + 1), 11, 12];
+const bikeLabel = (b) => BIKE_NAMES[b] || String(b);
+const isNamed = (b) => Boolean(BIKE_NAMES[b]);
+const orderBikes = (arr) => FLEET.filter((b) => arr.includes(b));
 
 // ---------- time helpers ----------
 const pad = (n) => String(n).padStart(2, "0");
@@ -209,7 +214,7 @@ export default function App() {
   function exportCSV() {
     const head = ["Bici", "Camera", "Inizio", "Consegna", "Durata (min)", "Danno", "Note"];
     const rows = history.map((h) => [
-      h.bike, h.room, fmtDateTime(h.start), fmtDateTime(h.end),
+      bikeLabel(h.bike), h.room, fmtDateTime(h.start), fmtDateTime(h.end),
       Math.round((h.end - h.start) / 60000), h.damaged ? "SI" : "", (h.note || "").replace(/"/g, "'"),
     ]);
     const csv = [head, ...rows].map((r) => r.map((c) => `"${c}"`).join(";")).join("\n");
@@ -223,14 +228,19 @@ export default function App() {
   }
 
   // ---------- derived ----------
-  const bikes = Array.from({ length: TOTAL_BIKES }, (_, i) => i + 1);
+  const bikes = FLEET;
   const outCount = Object.keys(active).length;
   const selOut = selected.length > 0 && !!active[selected[0]];
   const filtered = history.filter((h) => {
     if (onlyDamage && !h.damaged) return false;
     if (!query.trim()) return true;
     const q = query.trim().toLowerCase();
-    return String(h.bike) === q || h.room.toLowerCase().includes(q) || (h.note || "").toLowerCase().includes(q);
+    return (
+      String(h.bike) === q ||
+      bikeLabel(h.bike).toLowerCase().includes(q) ||
+      h.room.toLowerCase().includes(q) ||
+      (h.note || "").toLowerCase().includes(q)
+    );
   });
 
   if (dbError === "config") {
@@ -269,7 +279,7 @@ export default function App() {
             <div>
               <h1 className="font-semibold leading-tight">Noleggio bici</h1>
               <p className="text-xs text-slate-500 leading-tight">
-                {outCount} in uso · {TOTAL_BIKES - outCount} disponibili
+                {outCount} in uso · {bikes.length - outCount} disponibili
               </p>
             </div>
           </div>
@@ -321,7 +331,7 @@ export default function App() {
                         : "border-dashed border-slate-200 bg-white hover:border-emerald-400 hover:bg-emerald-50"
                     }`}
                   >
-                    <span className={`text-3xl font-bold ${isSel ? "text-white" : "text-slate-700"}`}>{b}</span>
+                    <span className={`${isNamed(b) ? "text-base leading-tight text-center px-1" : "text-3xl"} font-bold ${isSel ? "text-white" : "text-slate-700"}`}>{bikeLabel(b)}</span>
                     <span className={`mt-1 text-xs font-medium flex items-center gap-1 ${isSel ? "text-white" : "text-emerald-600"}`}>
                       {isSel ? (<><Check className="w-3 h-3" /> Selezionata</>) : (<><Plus className="w-3 h-3" /> Seleziona</>)}
                     </span>
@@ -337,7 +347,7 @@ export default function App() {
                   }`}
                 >
                   <div className="flex items-start justify-between w-full">
-                    <span className="text-2xl font-bold text-amber-900">{b}</span>
+                    <span className={`${isNamed(b) ? "text-sm leading-tight" : "text-2xl"} font-bold text-amber-900`}>{bikeLabel(b)}</span>
                     {isSel ? (
                       <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center">
                         <Check className="w-3.5 h-3.5" />
@@ -366,7 +376,7 @@ export default function App() {
             <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
               <div className="text-sm text-slate-600">
                 <span className="font-semibold text-slate-800">{selected.length}</span>{" "}
-                {selOut ? "da consegnare" : "da noleggiare"}: <span className="font-medium">n° {[...selected].sort((a, b) => a - b).join(", ")}</span>
+                {selOut ? "da consegnare" : "da noleggiare"}: <span className="font-medium">{orderBikes(selected).map(bikeLabel).join(", ")}</span>
                 <button onClick={() => setSelected([])} className="ml-3 text-xs text-slate-400 hover:text-slate-600 underline">
                   azzera
                 </button>
@@ -435,11 +445,11 @@ export default function App() {
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={`w-10 h-10 shrink-0 rounded-lg flex items-center justify-center font-bold ${h.damaged ? "bg-rose-500 text-white" : "bg-slate-100 text-slate-700"}`}>
-                          {h.bike}
+                          {isNamed(h.bike) ? <Bike className="w-5 h-5" /> : h.bike}
                         </div>
                         <div className="min-w-0">
                           <div className="font-medium text-sm">
-                            Camera {h.room}
+                            Bici {bikeLabel(h.bike)} · Camera {h.room}
                             {h.damaged && (
                               <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600">
                                 <TriangleAlert className="w-3 h-3" /> Danno
@@ -506,7 +516,7 @@ export default function App() {
       {showStart && (
         <Modal
           onClose={() => setShowStart(false)}
-          title={selected.length === 1 ? `Noleggio bici n° ${selected[0]}` : `Noleggio bici n° ${[...selected].sort((a, b) => a - b).join(", ")}`}
+          title={selected.length === 1 ? `Noleggio bici ${bikeLabel(selected[0])}` : `Noleggio ${selected.length} bici`}
         >
           <label className="block text-sm font-medium text-slate-600 mb-1">Numero camera</label>
           <input
@@ -552,7 +562,7 @@ export default function App() {
       {returning.length > 0 && (
         <Modal
           onClose={() => setReturning([])}
-          title={returning.length === 1 ? `Consegna bici n° ${returning[0]}` : `Consegna ${returning.length} bici`}
+          title={returning.length === 1 ? `Consegna bici ${bikeLabel(returning[0])}` : `Consegna ${returning.length} bici`}
         >
           <label className="block text-sm font-medium text-slate-600 mb-1">Orario di consegna</label>
           <input
@@ -567,7 +577,7 @@ export default function App() {
               Bici in consegna {returning.length > 1 && "— spunta solo quelle danneggiate"}
             </label>
             <div className="space-y-1.5">
-              {[...returning].sort((a, b) => a - b).map((b) => {
+              {orderBikes(returning).map((b) => {
                 const rec = active[b];
                 const dmg = damagedBikes.includes(b);
                 return (
@@ -579,7 +589,7 @@ export default function App() {
                     }`}
                   >
                     <span className="text-sm">
-                      <span className="font-semibold">Bici {b}</span>
+                      <span className="font-semibold">Bici {bikeLabel(b)}</span>
                       {rec && <span className="text-slate-500"> · Cam. {rec.room}</span>}
                     </span>
                     <span className={`text-xs font-medium flex items-center gap-1 ${dmg ? "text-rose-600" : "text-slate-400"}`}>
