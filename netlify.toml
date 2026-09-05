@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Necessario per una Single Page App: ogni percorso torna a index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
